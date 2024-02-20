@@ -20,9 +20,9 @@
    //   o set(MAKERCHIP, 0)
    //   o var(target, FPGA)  // or ASIC
    set(MAKERCHIP, 0)
-   var(my_design, tt_um_template)
+   var(my_design, tt_um_enieman)
    // var(my_design, tt_um_fpga_hdl_demo)
-   var(target, FPGA)  /// FPGA or ASIC
+   var(target, ASIC)  /// FPGA or ASIC
    //-------------------------------------------------------
    
    // Input debouncing--not important for the CPU which has no inputs,but the setting is here for final projects based on the CPU.
