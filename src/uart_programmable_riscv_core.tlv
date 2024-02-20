@@ -343,11 +343,14 @@ module m5_user_module_name (
    wire rst = ! rst_n | ui_in[7]; // Provide a dedicated button input for RESET
    wire rx_in = ui_in[2];         // Should be wired to Pin 2 of the USBUART Pmod (data from host to Pmod)
    wire tx_out;
-   assign uo_out[2] = tx_out;     // Should be wired to Pin 3 of the USBUART Pmod (data from Pmod to host)
    assign uo_out[7] = rst;        // Feedback of RST button, intended to use with LED
    assign uo_out[6] = reset;      // Feedback of CPU reset, indicates if UART controller is in write mode (reset = 1) or read mode (reset = 0)
    assign uo_out[5] = ~rx_in;     // Feedback of RX line, intended to use with LED
    assign uo_out[4] = ~tx_out;    // Feedback of TX line, intended to use with LED
+   assign uo_out[3] = 1'b0;       // Unused
+   assign uo_out[2] = tx_out;     // Should be wired to Pin 3 of the USBUART Pmod (data from Pmod to host)
+   assign uo_out[1] = 1'b0;       // Unused
+   assign uo_out[0] = 1'b0;       // Unused
    
    // I-Memory Interface
    logic imem_rd_en;
