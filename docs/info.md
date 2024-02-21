@@ -7,6 +7,9 @@ You can also include images in this folder and reference them in the markdown. E
 512 kb in size, and the combined size of all images must be less than 1 MB.
 -->
 
+## Motivation
+This project was developed as a part of the MEST ChipCraft course. As a part of the course, students are walked through the design and implementation of a RISC-V core. At the time that I took this course, students opting to tape out their RISC-V core were limited to a single, hard-wired program in place of a true instruction "memory". This led me to put together a simple UART controller tied to a small register file that could act as programmable instruction memory. Future students (or anyone experimenting with processor design) can utilize the UART modules in this design to enable programmability of their processor designs.
+
 ## How it works
 
 This project implements a simplified RISC-V core that runs instructions from a 64-byte register file that is programmed by the user via a UART interface.
@@ -20,6 +23,8 @@ The RISC-V core adheres to RV32I with the following exceptions:
 Instruction memory and data memory are isolated. Instruction memory and data memory are implemented as 64-byte (16-word) and 16-byte (4-word) register files that are written to and read from via a UART interface.
 
 The UART controller operates in two modes: "PROGRAM" and "DATA READ". Upon reset of the device, the controller enters "PROGRAM MODE". During this time, the user sends a sync packet, followed by the RV32I binary (64-bytes max). Once 64 bytes have been written (unused space can be filled with "add x0, x0, x0" instructions), the controller will enter "DATA READ" mode. In this mode, the user can read the contents of data memory by sending a single packet (the contents of this packet do not matter).
+
+For those wanting to implement their own processor design, the "uart_top" module (src/uart_top.sv) can be used to add programmability. If using "uart_top" in your own design, be sure to include the following files from src: uart_top.sv, mem_rf.sv, uart_ctrl.sv, uart_tx.sv, uart_rx.sv, shift_register.sv, neg_edge_detector.sv, pos_edge_detector.sv, and synchronizer.sv. "uart_top" is parameterized with IMEM_BYTE_ADDR_WIDTH and DMEM_BYTE_ADDR_WIDTH; these can be configured to set the size of instruction memory and data memory (e.g. size of instruction memory in bytes = 2^IMEM_BYTE_ADDR_WIDTH).
 
 Step-by-step usage:
 1. Connect the USBUART PMOD to the demo board via jumpers and a breadboard. The RX pin of the PMOD connects to in2, the TX pin to out2, and PWR/GND should be connected. No other pins of the PMOD are used.
@@ -37,7 +42,7 @@ Step-by-step usage:
 
 ## How to test
 
-Used Makerchip for testing. Open src/uart_programmable_riscv_core.tlv in Makerchip IDE (makerchip.com).
+Used Makerchip IDE (makerchip.com) for initial testing of RISC-V core. Used Psychogenic (https://psychogenic.com) TinyTapeout 3 Demo Board and FPGA daughter board to test UART controller and UART-Programmable RISC-V core. Open src/rv32i_pipelined_core.tlv in Makerchip IDE (makerchip.com) to get started with simulation; may have to comment out "uart_top" module and uncomment imem and dmem macros.
 
 ## External hardware
 
