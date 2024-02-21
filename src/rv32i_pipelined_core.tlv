@@ -99,6 +99,9 @@
    m5+riscv_sum_prog()
    m5_define_hier(IMEM, m5_NUM_INSTRS)
    |cpu
+
+/*------------------------------------------------------------------------------REPLACE CODE BELOW WITH YOUR CPU DESIGN------------------------------------------------------------------------------*/
+
       @0 // Instruction Fetch, PC Select
          $reset = *reset;
          $pc[31:0] =
@@ -265,8 +268,8 @@
          $ld_data[31:0] = *dmem_rd_data;
       
       // Note that pipesignals assigned here can be found under /fpga_pins/fpga.
-      
-      
+
+/*------------------------------------------------------------------------------REPLACE CODE ABOVE WITH YOUR CPU DESIGN------------------------------------------------------------------------------*/
       
    
    // Assert these to end simulation (before Makerchip cycle limit).
