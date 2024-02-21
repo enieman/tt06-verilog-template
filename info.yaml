@@ -15,7 +15,16 @@ project:
   
   # List your project's source files here. Source files must be in ./src and you must list each source file separately, one per line:
   source_files:        
-    - "uart_programmable_riscv_core_top.sv"
+    - "synchronizer.sv"
+    - "neg_edge_detector.sv"
+    - "pos_edge_detector.sv"
+    - "shift_register.sv"
+    - "uart_rx.sv"
+    - "uart_tx.sv"
+    - "uart_ctrl.sv"
+    - "mem_rf.sv"
+    - "uart_top.sv"
+    - "tt_um_enieman.sv"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
