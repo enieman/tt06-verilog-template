@@ -20,7 +20,7 @@ module uart_ctrl #(
    localparam int unsigned NUM_DMEM_BYTES = 2**DMEM_BYTE_ADDR_WIDTH;
 
    // Declare intermediate wires
-   logic rd_complete, wr_data_ready, all_imem_written;
+   logic rd_complete, wr_data_ready, all_imem_written, tx_ready;
    enum logic [1:0] {
       STATE_RESET      = 2'b00,
       STATE_DATA_WRITE = 2'b01,
@@ -33,12 +33,20 @@ module uart_ctrl #(
    assign rd_complete = ((state == STATE_DATA_READ) && (dmem_addr == NUM_DMEM_BYTES-1) && dmem_rd_en) ? 1'b1 : 1'b0;
    assign all_imem_written = ((state == STATE_DATA_WRITE) && (imem_addr == NUM_IMEM_BYTES-1) && imem_wr_en) ? 1'b1 : 1'b0;
    /* verilator lint_on WIDTHEXPAND */
+   
+   // Write Data from UART RX Ready
    pos_edge_detector wr_data_ready_detect (
       .clk(clk),
       .rst(rst),
       .signal_in(rx_ready),
-      .edge_detected(wr_data_ready)
-   );
+      .edge_detected(wr_data_ready));
+   
+   // Ready to read data from D-Memory
+   pos_edge_detector tx_ready_detect (
+      .clk(clk),
+      .rst(rst),
+      .signal_in((state == STATE_DATA_READ) & tx_empty),
+      .edge_detected(tx_ready));
 
    // State machine logic
    always_ff @(posedge clk) begin
@@ -66,15 +74,21 @@ module uart_ctrl #(
       if (rst) dmem_addr <= '0;
       else if (state == STATE_RESET) dmem_addr <= '0;
       else if (state == STATE_IDLE)  dmem_addr <= '0;
-      else if (state == STATE_DATA_READ && dmem_rd_en) dmem_addr <= dmem_addr + 1;
+      else if (state == STATE_DATA_READ && tx_req) dmem_addr <= dmem_addr + 1;
    end //always_ff
+   
+   // Delay TX Request One Cycle from D-Mem Read Enable
+   always_ff @(posedge clk) begin
+      if (rst) tx_req <= 1'b0;
+      else tx_req <= dmem_rd_en;
+   end
 
    // Connect outputs
    assign cpu_rst    = (state == STATE_RESET || state == STATE_DATA_WRITE || rst) ? 1'b1 : 1'b0;
    assign imem_ctrl  = cpu_rst;
    assign dmem_ctrl  = cpu_rst;
-   assign dmem_rd_en = (state == STATE_DATA_READ && tx_empty) ? 1'b1 : 1'b0;
+   assign dmem_rd_en = (state == STATE_DATA_READ && tx_ready) ? 1'b1 : 1'b0;
    assign imem_wr_en = (state == STATE_DATA_WRITE && wr_data_ready) ? 1'b1 : 1'b0;
-   assign tx_req     = dmem_rd_en;
+   // assign tx_req     = dmem_rd_en;
 
 endmodule

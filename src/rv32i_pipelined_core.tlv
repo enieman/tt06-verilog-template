@@ -87,11 +87,13 @@
    m4_sv_include_url(https://raw.githubusercontent.com/enieman/tt06-verilog-template/main/src/neg_edge_detector.sv)
    m4_sv_include_url(https://raw.githubusercontent.com/enieman/tt06-verilog-template/main/src/pos_edge_detector.sv)
    m4_sv_include_url(https://raw.githubusercontent.com/enieman/tt06-verilog-template/main/src/shift_register.sv)
+   m4_sv_include_url(https://raw.githubusercontent.com/enieman/tt06-verilog-template/main/src/byte_to_word.sv)
+   m4_sv_include_url(https://raw.githubusercontent.com/enieman/tt06-verilog-template/main/src/word_to_byte.sv)
    m4_sv_include_url(https://raw.githubusercontent.com/enieman/tt06-verilog-template/main/src/uart_rx.sv)
    m4_sv_include_url(https://raw.githubusercontent.com/enieman/tt06-verilog-template/main/src/uart_tx.sv)
    m4_sv_include_url(https://raw.githubusercontent.com/enieman/tt06-verilog-template/main/src/uart_ctrl.sv)
-   m4_sv_include_url(https://raw.githubusercontent.com/enieman/tt06-verilog-template/main/src/mem_rf.sv)
    m4_sv_include_url(https://raw.githubusercontent.com/enieman/tt06-verilog-template/main/src/uart_top.sv)
+   m4_sv_include_url(https://raw.githubusercontent.com/enieman/tt06-verilog-template/main/src/reg_file.sv)
    '])
 \TLV cpu()
    
@@ -99,9 +101,6 @@
    m5+riscv_sum_prog()
    m5_define_hier(IMEM, m5_NUM_INSTRS)
    |cpu
-
-/*------------------------------------------------------------------------------REPLACE CODE BELOW WITH YOUR CPU DESIGN------------------------------------------------------------------------------*/
-
       @0 // Instruction Fetch, PC Select
          $reset = *reset;
          $pc[31:0] =
@@ -112,9 +111,9 @@
                                  >>1$inc_pc;
          *imem_rd_en = ! ($reset || >>1$reset);
          *imem_rd_addr = $pc[*IMEM_BYTE_ADDR_WIDTH-1:2];
-         $instr[31:0] = *imem_rd_data[31:0];
       
       @1 // Instruction Decode, PC Increment
+         $instr[31:0] = *imem_rd_data[31:0];
          $inc_pc[31:0] = $pc + 32'h4;
          
          // Instruction Fields
@@ -259,17 +258,19 @@
          $rf_wr_index[4:0] = $valid ? $rd : >>2$rd;
          $rf_wr_data[31:0] = $valid ? $result : >>2$ld_data;
       
-      @4 // Data Memory R/W
+      @4 // Data Memory Write
          *dmem_rd_en = $valid_load;
          *dmem_wr_en = $valid_store;
          *dmem_addr = $result[*DMEM_BYTE_ADDR_WIDTH-1:2];
          *dmem_wr_byte_en = 4'b1111; // Just implement LW/SW for now
          *dmem_wr_data = $src2_value;
+      
+      @5 // Data Memory Read
          $ld_data[31:0] = *dmem_rd_data;
       
       // Note that pipesignals assigned here can be found under /fpga_pins/fpga.
-
-/*------------------------------------------------------------------------------REPLACE CODE ABOVE WITH YOUR CPU DESIGN------------------------------------------------------------------------------*/
+      
+      
       
    
    // Assert these to end simulation (before Makerchip cycle limit).
@@ -313,36 +314,17 @@ module top(input logic clk, input logic reset, input logic [31:0] cyc_cnt, outpu
    logic ena = 1'b0;
    logic rst_n = ! reset;
    
+   // Testbench Variables
+   localparam int unsigned CYCLES_PER_BIT = 8;
+   bit [31:0] instructions [16];
+   bit [7:0] data [16];
+   
    // Instantiate the Tiny Tapeout module.
    m5_user_module_name tt(.*);
    
-   // Send UART Packet
-   /* task send_uart_packet(input logic [7:0] data);
-      // For sim purposes, assume we are operating at 16x baud rate
-      logic [9:0] packet = {1'b1, data, 1'b0};
-      for (int unsigned i = 0; i < 10; i++) begin
-         ui_in[2] <= packet[i];
-         repeat(16) @(negedge clk);
-      end
-   endtask
-   
-   // Read UART Packet
-   task read_uart_packet(output logic [7:0] data);
-      // For sim purposes, assume we are operating at 16x baud rate
-      logic [9:0] packet = {1'b1, data, 1'b0};
-      while (uo_out[2] == 1'b1) @(negedge clk);
-      repeat(8) @(negedge clk);
-      for (int unsigned i = 0; i < 10; i++) begin
-         packet[i] <= uo_out[2];
-         repeat(16) @(posedge clk);
-      end
-      data = packet[8:1];
-   endtask */
-      
-   
    // Passed/failed to control Makerchip simulation, passed from Tiny Tapeout module's uo_out pins.
-   assign passed = 1'b0;
-   assign failed = 1'b0;
+   assign passed = (data[4] == 1+2+3+4+5+6+7+8+9) ? 1'b1 : 1'b0;
+   assign failed = ~passed;
 endmodule
 
 '])
@@ -392,15 +374,17 @@ module m5_user_module_name (
    assign uo_out[0] = 1'b0;       // Unused
    
    // I-Memory Interface
-   logic imem_rd_en;
-   logic [IMEM_BYTE_ADDR_WIDTH-3:0] imem_rd_addr;
-   logic [31:0] imem_rd_data;
+   logic uart_imem_ctrl;
+   logic imem_rd_en, uart_imem_wr_en;
+   logic [IMEM_BYTE_ADDR_WIDTH-3:0] imem_rd_addr, uart_imem_addr;
+   logic [3:0] uart_imem_byte_en;
+   logic [31:0] imem_rd_data, uart_imem_wr_data;
    
    // D-Memory Interface
-   logic dmem_rd_en, dmem_wr_en;
-   logic [DMEM_BYTE_ADDR_WIDTH-3:0] dmem_addr;
+   logic dmem_rd_en, dmem_wr_en, uart_dmem_rd_en;
+   logic [DMEM_BYTE_ADDR_WIDTH-3:0] dmem_addr, uart_dmem_addr;
    logic [3:0] dmem_wr_byte_en;
-   logic [31:0] dmem_wr_data, dmem_rd_data;
+   logic [31:0] dmem_wr_data, dmem_rd_data, uart_dmem_rd_data;
    
    // UART Module
    uart_top #(
@@ -413,15 +397,49 @@ module m5_user_module_name (
       .rx_in(rx_in),
       .tx_out(tx_out),
       .cpu_rst(reset),
-      .imem_rd_en(imem_rd_en),
-      .imem_rd_addr(imem_rd_addr),
-      .imem_rd_data(imem_rd_data),
-      .dmem_rd_en(dmem_rd_en),
-      .dmem_wr_en(dmem_wr_en),
-      .dmem_addr(dmem_addr),
-      .dmem_wr_byte_en(dmem_wr_byte_en),
-      .dmem_wr_data(dmem_wr_data),
-      .dmem_rd_data(dmem_rd_data));
+      .imem_ctrl(uart_imem_ctrl),
+      .imem_wr_en(uart_imem_wr_en),
+      .imem_addr(uart_imem_addr),
+      .imem_byte_en(uart_imem_byte_en),
+      .imem_wr_data(uart_imem_wr_data),
+      .dmem_ctrl(),
+      .dmem_rd_en(uart_dmem_rd_en),
+      .dmem_addr(uart_dmem_addr),
+      .dmem_rd_data(uart_dmem_rd_data));
+   
+   // I-Memory
+   reg_file #(
+      .BYTE_ADDR_WIDTH(IMEM_BYTE_ADDR_WIDTH))
+   imem0 (
+      .clk(clk),
+      .rst(rst),
+      .rd_en0(uart_imem_ctrl ? 1'b0 : imem_rd_en),
+      .rd_addr0(uart_imem_ctrl ? '0 : imem_rd_addr),
+      .rd_data0(imem_rd_data),
+      .rd_en1(1'b0),
+      .rd_addr1('0),
+      .rd_data1(),
+      .wr_en(uart_imem_ctrl ? uart_imem_wr_en : 1'b0),
+      .wr_addr(uart_imem_ctrl ? uart_imem_addr : '0),
+      .byte_en(uart_imem_ctrl ? uart_imem_byte_en : '0),
+      .wr_data(uart_imem_ctrl ? uart_imem_wr_data : '0));
+   
+   // D-Memory
+   reg_file #(
+      .BYTE_ADDR_WIDTH(DMEM_BYTE_ADDR_WIDTH))
+   dmem0 (
+      .clk(clk),
+      .rst(rst),
+      .rd_en0(dmem_rd_en),
+      .rd_addr0(dmem_addr),
+      .rd_data0(dmem_rd_data),
+      .rd_en1(uart_dmem_rd_en),
+      .rd_addr1(uart_dmem_addr),
+      .rd_data1(uart_dmem_rd_data),
+      .wr_en(dmem_wr_en),
+      .wr_addr(dmem_addr),
+      .byte_en(dmem_wr_byte_en),
+      .wr_data(dmem_wr_data));
    
 \TLV
    /* verilator lint_off UNOPTFLAT */
