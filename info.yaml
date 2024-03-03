@@ -18,12 +18,14 @@ project:
     - "synchronizer.sv"
     - "neg_edge_detector.sv"
     - "pos_edge_detector.sv"
+    - "byte_to_word.sv"
+    - "word_to_byte.sv"
     - "shift_register.sv"
     - "uart_rx.sv"
     - "uart_tx.sv"
     - "uart_ctrl.sv"
-    - "mem_rf.sv"
     - "uart_top.sv"
+    - "reg_file.sv"
     - "tt_um_enieman.sv"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
