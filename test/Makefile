@@ -2,10 +2,10 @@
 # See https://docs.cocotb.org/en/stable/quickstart.html for more info
 
 # defaults
-SIM ?= icarus
+SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = mem_rf.sv neg_edge_detector.sv pos_edge_detector.sv shift_register.sv synchronizer.sv tt_um_enieman.sv uart_ctrl.sv uart_rx.sv uart_top.sv uart_tx.sv
+PROJECT_SOURCES = byte_to_word.sv neg_edge_detector.sv pos_edge_detector.sv reg_file.sv shift_register.sv synchronizer.sv tt_um_enieman.sv uart_ctrl.sv uart_rx.sv uart_top.sv uart_tx.sv word_to_byte.sv
 
 ifneq ($(GATES),yes)
 
@@ -13,6 +13,7 @@ ifneq ($(GATES),yes)
 SIM_BUILD				= sim_build/rtl
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
 COMPILE_ARGS 		+= -I$(SRC_DIR)
+COMPILE_ARGS      += --timing
 
 else
 
