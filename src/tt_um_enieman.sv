@@ -78,7 +78,7 @@ module tt_um_enieman (
 );
 
    // Parameters for Memory Sizing and UART Baud
-   localparam int unsigned COUNTER_WIDTH = 24;       // Width of the clock counters in the UART RX and TX modules
+   localparam int unsigned COUNTER_WIDTH = 16;       // Width of the clock counters in the UART RX and TX modules; at 50MHz, 16 bits should allow baud as low as 763
    localparam int unsigned IMEM_BYTE_ADDR_WIDTH = 6; // 64 bytes / 16 words of I-Memory
    localparam int unsigned DMEM_BYTE_ADDR_WIDTH = 4; // 16 bytes /  4 words of D-Memory
 
